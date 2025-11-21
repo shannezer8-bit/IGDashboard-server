@@ -1,8 +1,8 @@
 {
   "name": "igdashboard-server",
   "version": "1.0.0",
+  "type": "module",          /* ← ADD THIS */
   "main": "server.js",
-  "type": "commonjs",
   "scripts": {
     "start": "node server.js"
   },
