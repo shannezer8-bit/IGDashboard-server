@@ -14,24 +14,24 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ MongoDB connect
+// ✅ API FIRST
+app.get("/api/data", (req, res) => {
+  res.json({ status: "success" });
+});
+
+// ✅ MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.log("❌ MongoDB Error:", err));
 
-// ✅ Serve client build
 const clientPath = path.join(__dirname, "client");
+
+// ✅ Serve client AFTER API
 app.use(express.static(clientPath));
 
-// ✅ Serve index.html for ALL routes
 app.get("*", (req, res) => {
   res.sendFile(path.join(clientPath, "index.html"));
-});
-
-// ✅ API TEST
-app.get("/api/data", (req, res) => {
-  res.json({ status: "success" });
 });
 
 const PORT = process.env.PORT || 10000;
