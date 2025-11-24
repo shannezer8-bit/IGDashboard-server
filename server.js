@@ -1,49 +1,81 @@
 import express from "express";
 import dotenv from "dotenv";
+import fetch from "node-fetch";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
-// Fix ngrok warning
-app.use((req, res, next) => {
-  res.setHeader("ngrok-skip-browser-warning", "true");
-  next();
+// Static Hosting
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "client")));
+
+// ✅ Home page
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/index.html"));
 });
 
-// ------------------------------
-// INSTAGRAM WEBHOOK VERIFICATION
-// ------------------------------
-app.get("/auth/instagram/callback", (req, res) => {
-  const VERIFY_TOKEN = "ejswebhook123";
+// ✅ Instagram Login Redirect
+app.get("/auth/instagram", (req, res) => {
+  const redirect = encodeURIComponent(process.env.CALLBACK_URL);
 
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
+  const url = `https://www.instagram.com/oauth/authorize
+    ?client_id=${process.env.INSTAGRAM_CLIENT_ID}
+    &redirect_uri=${redirect}
+    &response_type=code
+    &scope=user_profile,user_media`
+    .replace(/\s+/g, "");
 
-  if (mode === "subscribe" && token === VERIFY_TOKEN) {
-    console.log("✔ Webhook Verified Successfully!");
-    return res.status(200).send(challenge);
+  res.redirect(url);
+});
+
+// ✅ OAuth Callback
+app.get("/auth/instagram/callback", async (req, res) => {
+  const code = req.query.code;
+  if (!code) return res.send("❌ Missing code");
+
+  try {
+    const tokenRes = await fetch("https://api.instagram.com/oauth/access_token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.INSTAGRAM_CLIENT_ID,
+        client_secret: process.env.INSTAGRAM_CLIENT_SECRET,
+        grant_type: "authorization_code",
+        redirect_uri: process.env.CALLBACK_URL,
+        code,
+      }),
+    });
+
+    const tokenData = await tokenRes.json();
+
+    if (tokenData.error_type) {
+      return res.send("❌ Token Error: " + JSON.stringify(tokenData));
+    }
+
+    const accessToken = tokenData.access_token;
+    const userId = tokenData.user_id;
+
+    res.redirect(
+      process.env.FRONTEND_URL +
+        "/success.html?username=" +
+        userId +
+        "&access_token=" +
+        accessToken
+    );
+
+  } catch (err) {
+    res.send("❌ Server Error");
   }
-
-  console.log("❌ Webhook verification failed");
-  res.sendStatus(403);
 });
 
-// ------------------------------
-// RECEIVE INSTAGRAM EVENTS
-// ------------------------------
-app.post("/auth/instagram/callback", (req, res) => {
-  console.log("📥 IG Event Received:", JSON.stringify(req.body, null, 2));
-  res.sendStatus(200);
-});
-
-// ------------------------------
-// PORT FIX FOR RENDER.COM
-// ------------------------------
-const PORT = process.env.PORT || 10000;
-
-app.listen(PORT, () => {
-  console.log(`🔥 Server running on port ${PORT}`);
-});
+app.listen(process.env.PORT, () =>
+  console.log("🔥 Dashboard + API running on " + process.env.PORT)
+);
