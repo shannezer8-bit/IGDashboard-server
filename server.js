@@ -20,11 +20,12 @@ mongoose
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.log("❌ MongoDB Error:", err));
 
-// ✅ Serve client
+// ✅ Serve client build
 const clientPath = path.join(__dirname, "client");
 app.use(express.static(clientPath));
 
-app.get("/", (req, res) => {
+// ✅ Serve index.html for ALL routes
+app.get("*", (req, res) => {
   res.sendFile(path.join(clientPath, "index.html"));
 });
 
