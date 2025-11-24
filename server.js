@@ -14,9 +14,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ API FIRST
+// ✅ API FIRST + PROTECT FROM FRONTEND OVERRIDE
 app.get("/api/data", (req, res) => {
-  res.json({ status: "success" });
+  return res.json({ status: "success" });
 });
 
 // ✅ MongoDB
@@ -26,10 +26,14 @@ mongoose
   .catch((err) => console.log("❌ MongoDB Error:", err));
 
 const clientPath = path.join(__dirname, "client");
-
-// ✅ Serve client AFTER API
 app.use(express.static(clientPath));
 
+// ✅ IMPORTANT FIX
+app.get("/api/*", (req, res) => {
+  res.status(404).json({ error: "API route not found" });
+});
+
+// ✅ Serve frontend LAST
 app.get("*", (req, res) => {
   res.sendFile(path.join(clientPath, "index.html"));
 });
