@@ -76,6 +76,6 @@ app.get("/auth/instagram/callback", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT, () =>
-  console.log("🔥 Dashboard + API running on " + process.env.PORT)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("🔥 Dashboard + API running on " + PORT));
 );
