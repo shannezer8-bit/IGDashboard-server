@@ -1,31 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IG Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+<title>Login</title>
+<style>
+body { font-family: Arial; text-align:center; margin-top:100px; }
+input { padding:10px; margin:10px; width:200px; }
+button { padding:10px 20px; }
+</style>
 </head>
 <body>
-    <h1>Instagram Dashboard</h1>
 
-    <div id="stats">
-        <div class="card">
-            <h3>Followers</h3>
-            <p id="followers">Loading...</p>
-        </div>
+<h2>Login</h2>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
 
-        <div class="card">
-            <h3>Engagement</h3>
-            <p id="engagement">Loading...</p>
-        </div>
+<h1>Dashboard</h1>
+<p>Followers: <span id="followers"></span></p>
+<p>Engagement: <span id="engagement"></span></p>
+<p>Saves: <span id="saves"></span></p>
 
-        <div class="card">
-            <h3>Saves</h3>
-            <p id="saves">Loading...</p>
-        </div>
-    </div>
+<script>
+function login() {
+  fetch("/api/login", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      email: document.getElementById("email").value,
+      password: document.getElementById("password").value
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+      if (!data.success) return alert("Login failed");
+      document.getElementById("followers").innerText = data.followers;
+      document.getElementById("engagement").innerText = data.engagement;
+      document.getElementById("saves").innerText = data.saves;
+  });
+}
+</script>
 
-    <script src="script.js"></script>
 </body>
 </html>
