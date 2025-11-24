@@ -1,31 +1,30 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Render / Vercel / Local PORT handling
-const PORT = process.env.PORT || 3000;
+// ✅ Serve client files
+app.use(express.static(path.join(__dirname, "../client")));
 
-// ✅ TEST API ROUTE
+// ✅ Root serves dashboard UI
 app.get("/", (req, res) => {
-  res.json({ message: "✅ Server is running successfully!" });
+  res.sendFile(path.join(__dirname, "../client/index.html"));
 });
 
-// ✅ Example API route (modify for your dashboard)
-app.get("/api/data", async (req, res) => {
-  try {
-    res.json({ status: "success", data: "Your dashboard data here" });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+// ✅ API
+app.get("/api/data", (req, res) => {
+  res.json({ status: "success", data: "Your dashboard data here" });
 });
 
-// ✅ START SERVER
-app.listen(PORT, () => {
-  console.log(`🔥 API running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🔥 API running on port ${PORT}`));
