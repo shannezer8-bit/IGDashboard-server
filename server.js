@@ -11,32 +11,29 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Static Hosting
+// ✅ STATIC HOSTING (Render + Local)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(express.static(path.join(__dirname, "client"))); 
+app.use(express.static(path.join(__dirname, "../client")));
 
-// ✅ Home page
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../client/index.html"));
 });
 
-// ✅ Instagram Login Redirect
 app.get("/auth/instagram", (req, res) => {
   const redirect = encodeURIComponent(process.env.CALLBACK_URL);
 
-  const url = `https://www.instagram.com/oauth/authorize
-    ?client_id=${process.env.INSTAGRAM_CLIENT_ID}
-    &redirect_uri=${redirect}
-    &response_type=code
-    &scope=user_profile,user_media`
-    .replace(/\s+/g, "");
+  const url =
+    `https://www.instagram.com/oauth/authorize` +
+    `?client_id=${process.env.INSTAGRAM_CLIENT_ID}` +
+    `&redirect_uri=${redirect}` +
+    `&response_type=code` +
+    `&scope=user_profile,user_media`;
 
   res.redirect(url);
 });
 
-// ✅ OAuth Callback
 app.get("/auth/instagram/callback", async (req, res) => {
   const code = req.query.code;
   if (!code) return res.send("❌ Missing code");
@@ -76,6 +73,9 @@ app.get("/auth/instagram/callback", async (req, res) => {
   }
 });
 
+// ✅ PORT FIX FOR RENDER
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("🔥 Dashboard + API running on " + PORT));
-);
+
+app.listen(PORT, () => {
+  console.log("🔥 Dashboard + API running on " + PORT);
+});
