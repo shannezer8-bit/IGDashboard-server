@@ -1,4 +1,4 @@
-fetch("https://igdashboard-server-8.onrender.com/api/data")
+fetch("/api/data")
     .then(res => res.json())
     .then(data => {
         document.getElementById("followers").innerText = "12,430";
