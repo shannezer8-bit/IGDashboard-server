@@ -2,6 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
@@ -9,9 +11,18 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// =============================
-// 1. Instagram OAuth Redirect
-// =============================
+// Static Hosting
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+app.use(express.static(path.join(__dirname, "client"))); 
+
+// ✅ Home page
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/index.html"));
+});
+
+// ✅ Instagram Login Redirect
 app.get("/auth/instagram", (req, res) => {
   const redirect = encodeURIComponent(process.env.CALLBACK_URL);
 
@@ -25,17 +36,12 @@ app.get("/auth/instagram", (req, res) => {
   res.redirect(url);
 });
 
-// =============================
-// 2. OAuth Callback → get CODE
-// =============================
+// ✅ OAuth Callback
 app.get("/auth/instagram/callback", async (req, res) => {
   const code = req.query.code;
   if (!code) return res.send("❌ Missing code");
 
   try {
-    // =============================
-    // 3. Exchange CODE → Access Token
-    // =============================
     const tokenRes = await fetch("https://api.instagram.com/oauth/access_token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -57,30 +63,19 @@ app.get("/auth/instagram/callback", async (req, res) => {
     const accessToken = tokenData.access_token;
     const userId = tokenData.user_id;
 
-    // =============================
-    // 4. Fetch User Profile
-    // =============================
-    const profileRes = await fetch(
-      `https://graph.instagram.com/${userId}?fields=id,username,account_type,media_count&access_token=${accessToken}`
-    );
-
-    const profile = await profileRes.json();
-
-    // Redirect back to frontend with data
     res.redirect(
       process.env.FRONTEND_URL +
         "/success.html?username=" +
-        profile.username +
+        userId +
         "&access_token=" +
         accessToken
     );
 
   } catch (err) {
-    console.log("Error:", err);
     res.send("❌ Server Error");
   }
 });
 
 app.listen(process.env.PORT, () =>
-  console.log("🔥 Server running on " + process.env.PORT)
+  console.log("🔥 Dashboard + API running on " + process.env.PORT)
 );
