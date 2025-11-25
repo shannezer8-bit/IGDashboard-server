@@ -10,22 +10,24 @@ import { fileURLToPath } from "url";
 
 dotenv.config();
 
+// App Init
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-// Fix dirname ES module
+// Fix __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ----------------- DATABASE ---------------------
-mongoose.connect(process.env.MONGO_URI)
+// -------------------------- DATABASE ------------------------------
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log("DB Error:", err));
+  .catch((err) => console.log("DB Error:", err));
 
-// ----------------- INSTAGRAM LOGIN ---------------------
-app.get("/auth/instagram", (req,res) => {
+// ---------------------- INSTAGRAM LOGIN ---------------------------
+app.get("/auth/instagram", (req, res) => {
   const url =
     `https://api.instagram.com/oauth/authorize?client_id=${process.env.IG_CLIENT_ID}` +
     `&redirect_uri=${process.env.IG_REDIRECT_URI}` +
@@ -35,7 +37,7 @@ app.get("/auth/instagram", (req,res) => {
   res.redirect(url);
 });
 
-app.get("/auth/instagram/callback", async (req,res)=>{
+app.get("/auth/instagram/callback", async (req, res) => {
   const code = req.query.code;
   if (!code) return res.send("Missing code");
 
@@ -47,11 +49,15 @@ app.get("/auth/instagram/callback", async (req,res)=>{
         client_secret: process.env.IG_CLIENT_SECRET,
         grant_type: "authorization_code",
         redirect_uri: process.env.IG_REDIRECT_URI,
-        code
-      })
+        code,
+      }),
     });
 
     const tokenData = await tokenRes.json();
+
+    if (!tokenData.access_token) {
+      return res.send("Instagram login failed");
+    }
 
     const jwtToken = jwt.sign(
       { access_token: tokenData.access_token },
@@ -59,40 +65,46 @@ app.get("/auth/instagram/callback", async (req,res)=>{
       { expiresIn: "2h" }
     );
 
+    // Redirect to React frontend with token
     return res.redirect(`/?token=${jwtToken}`);
-
   } catch (err) {
     console.log(err);
     res.send("Login error");
   }
 });
 
-// ----------------- DASHBOARD API ---------------------
-app.get("/api/dashboard", async (req,res)=> {
-  const auth = req.headers.authorization;
-  if (!auth) return res.status(401).json({ error:"Missing token" });
+// ---------------------- DASHBOARD API -----------------------------
+app.get("/api/dashboard", async (req, res) => {
+  const header = req.headers.authorization;
 
-  const token = auth.replace("Bearer ","");
+  if (!header) return res.status(401).json({ error: "Missing token" });
+
+  const token = header.replace("Bearer ", "");
 
   try {
-    const data = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     return res.json({
       success: true,
-      message: "Dashboard data works!",
-      instagram_token: data.access_token
+      followers: 12000,
+      engagement: 4.9,
+      saves: 321,
+      instagram_token: decoded.access_token,
     });
   } catch (e) {
-    return res.status(401).json({ error:"Invalid token" });
+    return res.status(401).json({ error: "Invalid token" });
   }
 });
 
-// ----------------- SERVE CLIENT ---------------------
-app.use(express.static(path.join(__dirname, "client")));
+// ----------------------- SERVE REACT CLIENT -----------------------
+const clientPath = path.join(__dirname, "..", "igdashboard-client", "build");
+app.use(express.static(clientPath));
 
-app.get("*", (req,res)=> {
-  res.sendFile(path.join(__dirname, "client", "index.html"));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(clientPath, "index.html"));
 });
 
-// ----------------- SERVER START ---------------------
+// ------------------------- SERVER START ---------------------------
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => console.log(`🔥 IG Dashboard running on ${PORT}`));
